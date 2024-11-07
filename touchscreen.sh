@@ -1,8 +1,18 @@
 #!/bin/bash
-devices=$(xinput list | grep -i "touch" | grep -i -v "mouse" | grep -Po "\s+id=\d+" | cut -d "=" -f 2)
-if [ $? -ne 0 ]; then
-    devices=""
+devices=""
+xinput list | grep -i "touch" | grep -Po "\s+id=\d+"
+if [ $? -eq 0 ]; then
+    devices=$(xinput list | grep -i "touch" | grep -Po "\s+id=\d+" | cut -d "=" -f 2)
 fi
+udev_devices=""
+udev_device=$(udevadm info --export-db | awk '/ID_INPUT_TOUCHSCREEN=1/' RS= | grep '^E: NAME=' | cut -d '"' -f 2)
+if [ "$udev_device" != "" ]; then
+    xinput list | grep -Po "$udev_device\s+id=\d+"
+    if [ $? -eq 0 ]; then
+        udev_devices=$(xinput list | grep -Po "$udev_device\s+id=\d+" | cut -d "=" -f 2)
+    fi
+fi
+devices=$(echo "$devices $udev_devices" | xargs)
 xrandr | grep -Po "\s+connected\s+\d+"
 if [ $? -eq 0 ]; then
     vga=$(xrandr | grep -Po "(VGA|DP)-\d+\s+connected" -m 1 | cut -d ' ' -f 1)
